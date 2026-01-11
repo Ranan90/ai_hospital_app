@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import '../ai/ai_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -296,11 +297,24 @@ class _HomeScreenState extends State<HomeScreen> {
           itemCount: services.length,
           itemBuilder: (context, index) {
             final service = services[index];
-            return _buildServiceCard(
-              service['icon'] as IconData,
-              service['title'] as String,
-              service['subtitle'] as String,
-              service['badges'] as bool? ?? false,
+            return InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                final title = service['title'] as String;
+
+                if (title.contains('Live Care')) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AIScreen()),
+                  );
+                }
+              },
+              child: _buildServiceCard(
+                service['icon'] as IconData,
+                service['title'] as String,
+                service['subtitle'] as String,
+                service['badges'] as bool? ?? false,
+              ),
             );
           },
         ),

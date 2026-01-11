@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/features/ai/ai_screen.dart';
 
 class LiveCareScreen extends StatelessWidget {
-  const LiveCareScreen({Key? key}) : super(key: key);
+  const LiveCareScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -88,6 +89,12 @@ class LiveCareScreen extends StatelessWidget {
               iconColor: Colors.white,
               iconBgColor: const Color(0xFF00695C),
               showBadge: true,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AIScreen()),
+                );
+              },
             ),
             const SizedBox(height: 16),
             _buildActionCard(
@@ -144,68 +151,74 @@ class LiveCareScreen extends StatelessWidget {
     required Color iconColor,
     required Color iconBgColor,
     bool showBadge = false,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: Colors.teal.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          Stack(
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: iconBgColor,
-                  borderRadius: BorderRadius.circular(16),
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 6,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: iconBgColor.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: iconColor, size: 28),
                 ),
-                child: Icon(icon, color: iconColor, size: 30),
-              ),
-              if (showBadge)
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    decoration: BoxDecoration(
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+
+            if (showBadge)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    'NEW',
+                    style: TextStyle(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.all(2),
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1A1F36),
               ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
