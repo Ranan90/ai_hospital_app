@@ -56,10 +56,9 @@ class _AIScreenState extends State<AIScreen> {
     setState(() => isLoading = true);
 
     try {
-      final data = await AIService.initUser(user);
+      await AIService.initUser(user);
 
       setState(() {
-        user = data;
         collectingHeightWeight = false;
         currentQuestion = "What symptoms are you experiencing?";
       });
@@ -84,12 +83,15 @@ class _AIScreenState extends State<AIScreen> {
     setState(() => isLoading = true);
 
     try {
-      final department = await AIService.symptomCheck(user['id'], [symptom]);
+      // Pass a dummy ID if we don't have one, but Supabase auth handles current user internally in Service
+      final department = await AIService.symptomCheck(0, [symptom]);
 
       if (department == null) {
         _showAiFailure();
         return;
       }
+
+      if (!mounted) return;
 
       Navigator.push(
         context,
