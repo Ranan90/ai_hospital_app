@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'auth_screen.dart';
 import '../ai/ai_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -48,13 +50,33 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue[700],
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('View chat'),
+            child: StreamBuilder<AuthState>(
+              stream: Supabase.instance.client.auth.onAuthStateChange,
+              builder: (context, snapshot) {
+                final session = snapshot.data?.session;
+                // Also check current session directly for initial state
+                final isLoggedIn =
+                    session != null ||
+                    Supabase.instance.client.auth.currentUser != null;
+
+                return ElevatedButton(
+                  onPressed: () async {
+                    if (isLoggedIn) {
+                      await Supabase.instance.client.auth.signOut();
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AuthScreen()),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isLoggedIn ? Colors.red : Colors.blue[700],
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text(isLoggedIn ? 'Log Out' : 'Login'),
+                );
+              },
             ),
           ),
         ],
@@ -303,10 +325,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 final title = service['title'] as String;
 
                 if (title.contains('Live Care')) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const AIScreen()),
-                  );
+                  final user = Supabase.instance.client.auth.currentUser;
+                  if (user == null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AuthScreen()),
+                    );
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AIScreen()),
+                    );
+                  }
                 }
               },
               child: _buildServiceCard(
