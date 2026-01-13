@@ -19,53 +19,48 @@ const openai = new OpenAI({
 
 /* 1️⃣ Get or update user info (height & weight editable) */
 app.post("/user", async (req, res) => {
-  const { name, email, phone, height_cm, weight_kg, dob } = req.body;
+  const { id, name, email, phone, height_cm, weight_kg, dob } = req.body;
 
   try {
-    // Check if user exists
-    const { data: existing } = await supabase
-      .from("users")
-      .select("*")
-      .eq("email", email)
-      .single();
-
-    if (existing) {
-      // Update height & weight if provided
-      const { data, error } = await supabase
-        .from("users")
-        .update({ height_cm, weight_kg })
-        .eq("id", existing.id)
-        .select()
-        .single();
-      if (error) throw error;
-      return res.json(data);
-    }
-
-    // Create new user
+    // 1. If we have an ID, update existing profile or create if not exists
+    // The frontend sends user_id if logged in.
+    
+    // Note: 'profiles' table usually linked to auth.users via id.
+    // If we rely on passed 'id', ensure it matches.
+    
+    // Upsert into profiles
     const { data, error } = await supabase
-      .from("users")
-      .insert({ name, email, phone, height_cm, weight_kg, dob })
+      .from("profiles")
+      .upsert({
+         id, 
+         name, 
+         email, 
+         phone, 
+         height_cm, 
+         weight_kg, 
+         dob,
+         updated_at: new Date().toISOString()
+      })
       .select()
       .single();
+
     if (error) throw error;
     res.json(data);
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to create/update user" });
+    console.error("Profile Error:", err);
+    res.status(500).json({ error: "Failed to create/update user profile" });
   }
 });
 
 /* 2️⃣ AI symptom check */
 app.post("/symptom-check", async (req, res) => {
-  const { user, answers } = req.body;
-  // answers = { fever: 'yes', chest_pain: 'no', ... }
+  const { user_id, answers } = req.body; // user_id passed from frontend
+  // answers = { fever: 'yes', chest_pain: 'no', ... } or list of strings
 
   try {
     const prompt = `
 You are a hospital triage AI.
-
-User info:
-${JSON.stringify(user)}
 
 User symptoms:
 ${JSON.stringify(answers)}
@@ -88,9 +83,31 @@ Reply in JSON format:
     });
 
     const content = aiRes.choices[0].message.content.trim();
+    // Parse JSON from AI response safely? 
+    // For now assuming content is JSON or simple string if AI fails to format.
+    // The prompt asks for JSON.
 
-    const department =
-      aiRes.choices?.[0]?.message?.content?.trim() ?? "General Medicine";
+    let resultData;
+    let department = "General Medicine";
+
+    try {
+        // Strip markdown code blocks if present
+        const jsonStr = content.replace(/^```json\n|\n```$/g, '');
+        resultData = JSON.parse(jsonStr);
+        department = resultData.department || department;
+    } catch (e) {
+        console.warn("AI didn't return valid JSON", content);
+    }
+    
+    // Save to Supabase
+    if (user_id) {
+       await supabase.from("symptom_checks").insert({
+          user_id: user_id,
+          symptoms: answers,
+          result_department: department,
+          metadata: resultData || { raw: content }
+       });
+    }
 
     res.json({ department });
   } catch (err) {

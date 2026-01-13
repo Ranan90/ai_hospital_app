@@ -7,44 +7,43 @@ class AIService {
   static Future<void> initUser(Map<String, dynamic> userData) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
-      await Supabase.instance.client.from('profiles').upsert({
-        'id': user.id,
-        ...userData,
-        'updated_at': DateTime.now().toIso8601String(),
-      });
+      // Call backend to update profile
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/user'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'id': user.id, ...userData}),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(
+          'Failed to update user profile: ${response.statusCode}',
+        );
+      }
     }
   }
 
   static Future<String?> symptomCheck(int userId, List<String> answers) async {
     try {
-      // 1. Call AI API for inference
+      final user = Supabase.instance.client.auth.currentUser;
+      final actualUserId = user?.id;
+
+      // 1. Call AI API for inference (Backend now handles Supabase insert)
       final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/symptom/check'),
+        Uri.parse('${ApiConfig.baseUrl}/symptom-check'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': userId, 'answers': answers}),
+        body: jsonEncode({'user_id': actualUserId, 'answers': answers}),
       );
 
       if (response.statusCode != 200) {
-        return null; // Or handle error appropriately
+        print('Error response: ${response.body}');
+        return null;
       }
 
       final data = jsonDecode(response.body);
       final department = data['department'];
 
-      // 2. Save result to Supabase
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user != null) {
-        await Supabase.instance.client.from('symptom_checks').insert({
-          'user_id': user.id,
-          'symptoms': answers,
-          'result_department': department,
-          'metadata': data, // Store full response if needed
-        });
-      }
-
       return department;
     } catch (e) {
-      // Log error or handle it
       print('Error in symptomCheck: $e');
       return null;
     }
