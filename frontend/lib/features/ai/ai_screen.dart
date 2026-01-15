@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../models/triage_models.dart';
 import 'ai_service.dart';
 import 'ai_results_screen.dart';
 
@@ -10,173 +11,161 @@ class AIScreen extends StatefulWidget {
 }
 
 class _AIScreenState extends State<AIScreen> {
-  final TextEditingController inputController = TextEditingController();
+  final TextEditingController controller = TextEditingController();
+  final List<ChatMessage> messages = [
+    ChatMessage(
+      role: "model",
+      content:
+          "Hello! I can help determine which medical specialist you may need. "
+          "What symptoms are you experiencing?",
+    ),
+  ];
 
-  Map<String, dynamic> user = {
-    "name": "John",
-    "email": "john@gmail.com",
-    "phone": "9999999999",
-    "height_cm": 0,
-    "weight_kg": 0,
-    "dob": "1990-01-01",
-  };
+  bool loading = false;
+  TriageResponse? result;
 
-  bool collectingHeightWeight = true;
-  String currentQuestion =
-      "Enter height (cm) and weight (kg) separated by comma (eg: 175,70)";
-  bool isLoading = false;
+  Future<void> send() async {
+    if (controller.text.isEmpty || loading) return;
 
-  @override
-  void dispose() {
-    inputController.dispose();
-    super.dispose();
-  }
-
-  /* ---------------- HEIGHT & WEIGHT ---------------- */
-
-  Future<void> submitHeightWeight() async {
-    final parts = inputController.text.split(',');
-
-    if (parts.length != 2) {
-      _showError('Please enter height and weight correctly.');
-      return;
-    }
-
-    final height = int.tryParse(parts[0].trim());
-    final weight = int.tryParse(parts[1].trim());
-
-    if (height == null || weight == null) {
-      _showError('Invalid height or weight.');
-      return;
-    }
-
-    user['height_cm'] = height;
-    user['weight_kg'] = weight;
-
-    setState(() => isLoading = true);
+    setState(() {
+      messages.add(ChatMessage(role: "user", content: controller.text));
+      controller.clear();
+      loading = true;
+    });
 
     try {
-      await AIService.initUser(user);
+      final res = await AIService.sendMessage(messages);
 
       setState(() {
-        collectingHeightWeight = false;
-        currentQuestion = "What symptoms are you experiencing?";
+        messages.add(ChatMessage(role: "model", content: res.message));
+
+        // Only show recommendation if truly a significant conclusion
+        if (res.status.toLowerCase() == "conclusion" &&
+            (res.recommendedDepartment?.isNotEmpty ?? false)) {
+          result = res;
+        }
       });
-    } catch (_) {
-      _showAiFailure();
-    } finally {
-      setState(() => isLoading = false);
-      inputController.clear();
-    }
-  }
-
-  /* ---------------- SYMPTOM SUBMIT ---------------- */
-
-  Future<void> submitSymptom() async {
-    final symptom = inputController.text.trim();
-
-    if (symptom.isEmpty) {
-      _showError('Please describe your symptoms.');
-      return;
-    }
-
-    setState(() => isLoading = true);
-
-    try {
-      // Pass a dummy ID if we don't have one, but Supabase auth handles current user internally in Service
-      final department = await AIService.symptomCheck(0, [symptom]);
-
-      if (department == null) {
-        _showAiFailure();
-        return;
-      }
-
+    } catch (e) {
       if (!mounted) return;
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => ResultScreen(department: department)),
+      String friendlyError =
+          "The AI service is unavailable. Please try again later.";
+
+      final msg = e.toString();
+      if (msg.contains("503")) {
+        friendlyError =
+            "The AI model is currently overloaded. Please try again later.";
+      } else if (msg.contains("429")) {
+        friendlyError =
+            "Daily usage limit reached. Please try again in a few hours.";
+      } else if (msg.contains("Failed host lookup") ||
+          msg.contains("SocketException")) {
+        friendlyError = "No internet connection. Please check your network.";
+      }
+
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Service Unavailable"),
+          content: Text(friendlyError),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // close dialog
+                Navigator.of(context).pop(); // go back home
+              },
+              child: const Text("Go Home"),
+            ),
+          ],
+        ),
       );
-    } catch (_) {
-      _showAiFailure();
     } finally {
-      setState(() => isLoading = false);
-      inputController.clear();
+      if (mounted) setState(() => loading = false);
     }
   }
-
-  /* ---------------- UI ---------------- */
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('AI Symptom Checker')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    currentQuestion,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+      appBar: AppBar(title: const Text("MediGuide AI")),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              itemCount: messages.length,
+              itemBuilder: (_, i) {
+                final m = messages[i];
+                final isUser = m.role == "user";
+
+                return ListTile(
+                  title: Align(
+                    alignment: isUser
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isUser ? Colors.blue : Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        m.content,
+                        style: TextStyle(
+                          color: isUser ? Colors.white : Colors.black,
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: inputController,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Type here...',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: collectingHeightWeight
-                          ? submitHeightWeight
-                          : submitSymptom,
-                      child: Text(collectingHeightWeight ? 'Continue' : 'Next'),
-                    ),
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
-
-  /* ---------------- DIALOGS ---------------- */
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  void _showAiFailure() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('AI Service Unavailable'),
-        content: const Text(
-          'Our AI service is currently not working.\n\n'
-          'Please try again later.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Retry'),
+                );
+              },
+            ),
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: const Text('Go Back'),
+          if (loading)
+            const Padding(
+              padding: EdgeInsets.all(8),
+              child: CircularProgressIndicator(),
+            ),
+          if (result != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ElevatedButton(
+                child: const Text("View Recommendation"),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AIResultScreen(
+                        result: TriageResponse(
+                          status: result!.status,
+                          message: result!.message,
+                          recommendedDepartment:
+                              result!.recommendedDepartment ??
+                              "General Medicine",
+                          reasoning: result!.reasoning,
+                          urgency: result!.urgency,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: controller,
+                    decoration: const InputDecoration(
+                      hintText: "Describe symptoms",
+                    ),
+                    onSubmitted: (_) => send(),
+                  ),
+                ),
+                IconButton(icon: const Icon(Icons.send), onPressed: send),
+              ],
+            ),
           ),
         ],
       ),
