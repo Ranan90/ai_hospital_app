@@ -39,11 +39,19 @@ class AIService {
      AI CHAT
   ===================== */
 
-  static Future<TriageResponse> sendMessage(List<ChatMessage> history) async {
+  static Future<TriageResponse> sendMessage(
+    List<ChatMessage> history, {
+    Map<String, dynamic>? userProfile,
+  }) async {
+    final body = {
+      "history": history.map((e) => e.toJson()).toList(),
+      if (userProfile != null) "userProfile": userProfile,
+    };
+
     final res = await http.post(
       Uri.parse("${ApiConfig.baseUrl}/ai/chat"),
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"history": history.map((e) => e.toJson()).toList()}),
+      body: jsonEncode(body),
     );
 
     if (res.statusCode != 200) {

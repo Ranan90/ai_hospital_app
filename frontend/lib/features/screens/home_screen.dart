@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'auth_screen.dart';
-import '../ai/ai_screen.dart';
+import 'live_care_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,7 +12,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  String _selectedDesign = 'design1';
 
   @override
   Widget build(BuildContext context) {
@@ -84,19 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         children: [
           // Tab Bar
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                const Icon(Icons.menu, color: Colors.grey),
-                const SizedBox(width: 12),
-                _buildTabButton('Design 1 (Teal)', 'design1'),
-                const SizedBox(width: 12),
-                _buildTabButton('Design 2 (Saudi Green)', 'design2'),
-              ],
-            ),
-          ),
+
           // Main Content
           Expanded(
             child: SingleChildScrollView(
@@ -117,20 +104,6 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: _buildBottomNavBar(),
       floatingActionButton: _buildFAB(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-    );
-  }
-
-  Widget _buildTabButton(String text, String value) {
-    final isSelected = _selectedDesign == value;
-    return ElevatedButton(
-      onPressed: () => setState(() => _selectedDesign = value),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: isSelected ? Colors.teal : Colors.grey[200],
-        foregroundColor: isSelected ? Colors.white : Colors.grey[700],
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      ),
-      child: Text(text),
     );
   }
 
@@ -325,18 +298,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 final title = service['title'] as String;
 
                 if (title.contains('Live Care')) {
-                  final user = Supabase.instance.client.auth.currentUser;
-                  if (user == null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AuthScreen()),
-                    );
-                  } else {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AIScreen()),
-                    );
-                  }
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LiveCareScreen()),
+                  );
                 }
               },
               child: _buildServiceCard(

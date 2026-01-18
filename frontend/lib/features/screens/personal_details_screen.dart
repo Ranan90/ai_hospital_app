@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/features/ai/ai_screen.dart';
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PersonalDetailsScreen extends StatefulWidget {
   const PersonalDetailsScreen({super.key});
@@ -16,9 +18,96 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
   String _heightUnit = 'cm';
   String _weightUnit = 'kg';
   DateTime? _selectedDate;
+  bool _isLoading = false;
 
   final List<String> _heightUnits = ['cm', 'ft'];
   final List<String> _weightUnits = ['kg', 'lbs'];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserData();
+  }
+
+  Future<void> _fetchUserData() async {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final data = await Supabase.instance.client
+          .from('profiles')
+          .select()
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (data != null && mounted) {
+        if (data['height'] != null)
+          _heightController.text = data['height'].toString();
+        if (data['weight'] != null)
+          _weightController.text = data['weight'].toString();
+        if (data['dob'] != null) {
+          final date = DateTime.parse(data['dob']);
+          _selectedDate = date;
+          _dobController.text = DateFormat('MM / dd / yyyy').format(date);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading profile: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _saveAndContinue() async {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('User not logged in')));
+      }
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Basic validation or conversion logic could go here
+      // For now, storing as string or number depending on DB schema.
+      // Assuming DB schema allows string or we parse it.
+      // Ideally height/weight are numeric in DB.
+
+      final updates = {
+        'id': userId,
+        'height': _heightController.text.trim(),
+        'weight': _weightController.text.trim(),
+        'dob': _selectedDate?.toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
+      await Supabase.instance.client.from('profiles').upsert(updates);
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AIScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving profile: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -31,9 +120,9 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now().subtract(
-        const Duration(days: 365 * 18),
-      ), // Default ~18 years ago
+      initialDate:
+          _selectedDate ??
+          DateTime.now().subtract(const Duration(days: 365 * 18)),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
       builder: (context, child) {
@@ -55,6 +144,9 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.teal[700],
@@ -71,7 +163,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
           IconButton(
             icon: const Icon(Icons.home_outlined, color: Colors.white),
             onPressed: () {
-              // Navigate home
+              Navigator.of(context).popUntil((route) => route.isFirst);
             },
           ),
         ],
@@ -108,7 +200,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
                   child: _buildTextField(
                     controller: _heightController,
                     hintText: 'Enter height',
-                    icon: Icons.straighten, // ruler/height icon proxy
+                    icon: Icons.straighten,
                     keyboardType: TextInputType.number,
                   ),
                 ),
@@ -136,7 +228,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
                   child: _buildTextField(
                     controller: _weightController,
                     hintText: 'Enter weight',
-                    icon: Icons.scale_outlined, // weight/scale icon proxy
+                    icon: Icons.scale_outlined,
                     keyboardType: TextInputType.number,
                   ),
                 ),
@@ -174,14 +266,14 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.blue[50], // Light blue background
+                color: Colors.blue[50],
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.blue[100]!),
               ),
               child: const Text(
                 'Note: Your personal information is kept secure and private. We use this data to provide you with personalized healthcare services.',
                 style: TextStyle(
-                  color: Color(0xFF455A64), // Blue-grey text
+                  color: Color(0xFF455A64),
                   fontSize: 13,
                   height: 1.4,
                 ),
@@ -194,9 +286,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
             SizedBox(
               height: 50,
               child: ElevatedButton(
-                onPressed: () {
-                  // TODO: Save details and navigate
-                },
+                onPressed: _saveAndContinue,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.teal[700],
                   foregroundColor: Colors.white,

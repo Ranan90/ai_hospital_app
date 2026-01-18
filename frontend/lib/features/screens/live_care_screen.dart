@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/features/ai/ai_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:frontend/features/screens/auth_screen.dart';
+import 'package:frontend/features/screens/personal_details_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LiveCareScreen extends StatelessWidget {
   const LiveCareScreen({super.key});
@@ -90,10 +93,20 @@ class LiveCareScreen extends StatelessWidget {
               iconBgColor: const Color(0xFF00695C),
               showBadge: true,
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AIScreen()),
-                );
+                final session = Supabase.instance.client.auth.currentSession;
+                if (session == null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AuthScreen()),
+                  );
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PersonalDetailsScreen(),
+                    ),
+                  );
+                }
               },
             ),
             const SizedBox(height: 16),
