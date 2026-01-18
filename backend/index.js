@@ -78,18 +78,39 @@ app.post("/user", async (req, res) => {
  */
 app.post("/ai/chat", async (req, res) => {
   try {
-    const { history } = req.body;
+    const { history, userProfile } = req.body;
 
     const contents = history.map((m) => ({
       role: m.role === "user" ? "user" : "model",
       parts: [{ text: m.content }],
     }));
 
+    if (userProfile) {
+      // Prepend context to the conversation or system instruction
+      // We'll append it to the system instruction dynamically here for this request
+      // But the generateContent config is static object in this code structure.
+      // A better way is to insert it as a system-like user message at the start,
+      // or modify the system instruction string for this request.
+
+      // Let's modify the first user message if possible, or add a context message.
+      // Adding a context message at the start:
+      const contextMsg = `Patient Profile:\nHeight: ${userProfile.height} ${userProfile.heightUnit || 'cm'}\nWeight: ${userProfile.weight} ${userProfile.weightUnit || 'kg'}\nDOB: ${userProfile.dob || 'Unknown'}`;
+
+      // We can prepend this to the very first message 'parts' if it is a user message,
+      // or insert a new turn. inserting a new turn might confuse the strict alternate turn policy of some models.
+      // Safest is to modify the system instruction for this call.
+    }
+
+    let activeSystemInstruction = SYSTEM_INSTRUCTION;
+    if (userProfile) {
+      activeSystemInstruction += `\n\nPatient Context:\nHeight: ${userProfile.height}\nWeight: ${userProfile.weight}\nDOB: ${userProfile.dob}`;
+    }
+
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash-exp",
       contents,
       config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
+        systemInstruction: activeSystemInstruction,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -138,5 +159,5 @@ app.post("/ai/chat", async (req, res) => {
    Server
 ======================= */
 app.listen(process.env.PORT || 3000, () =>
-  console.log(`Backend running on port ${process.env.PORT || 3000}`)
+  console.log(`Backend running on port ${process.env.PORT || 3000} `)
 );
