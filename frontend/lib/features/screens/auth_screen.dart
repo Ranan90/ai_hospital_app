@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../ai/ai_screen.dart';
+import '../services/api_service.dart';
+import '../doctor/doctor_dashboard_screen.dart';
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key});
+  final Widget? nextScreen;
+  const AuthScreen({super.key, this.nextScreen});
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -59,11 +62,33 @@ class _AuthScreenState extends State<AuthScreen> {
 
     try {
       if (_isLogin) {
+        // 1. Try Doctor Login First
+        try {
+          final doctor = await ApiService.doctorLogin(email, password);
+          if (doctor != null) {
+            // Success: Navigate to Doctor Dashboard
+             if (mounted) {
+               Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DoctorDashboardScreen(doctor: doctor),
+                ),
+              );
+            }
+            return; // Stop here if doctor login worked
+          }
+        } catch (e) {
+          // Ignore error and fallthrough to patient login
+          print("Not a doctor or login error: $e");
+        }
+
+        // 2. Fallback to Patient Login (Supabase)
         await Supabase.instance.client.auth.signInWithPassword(
           email: email,
           password: password,
         );
       } else {
+        // Signup is always for Patients via Supabase
         await Supabase.instance.client.auth.signUp(
           email: email,
           password: password,
@@ -72,10 +97,12 @@ class _AuthScreenState extends State<AuthScreen> {
       }
 
       if (mounted) {
-        // Navigate to AI Screen on success
+        // Navigate to nextScreen if provided, otherwise default to AI Screen
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const AIScreen()),
+          MaterialPageRoute(
+            builder: (_) => widget.nextScreen ?? const AIScreen(),
+          ),
         );
       }
     } on AuthException catch (e) {

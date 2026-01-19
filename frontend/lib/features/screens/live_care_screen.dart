@@ -89,7 +89,7 @@ class LiveCareScreen extends StatelessWidget {
             _buildActionCard(
               title: 'Get consultation\nimmediately',
               icon: Icons.videocam,
-              iconColor: Colors.white,
+              iconColor: Colors.black,
               iconBgColor: const Color(0xFF00695C),
               showBadge: true,
               onTap: () {
@@ -97,7 +97,12 @@ class LiveCareScreen extends StatelessWidget {
                 if (session == null) {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const AuthScreen()),
+                    MaterialPageRoute(
+                      builder:
+                          (_) => const AuthScreen(
+                            nextScreen: PersonalDetailsScreen(),
+                          ),
+                    ),
                   );
                 } else {
                   Navigator.push(
@@ -113,7 +118,7 @@ class LiveCareScreen extends StatelessWidget {
             _buildActionCard(
               title: 'Schedule video\ncall',
               icon: Icons.calendar_today,
-              iconColor: Colors.white,
+              iconColor: Colors.black,
               iconBgColor: const Color(0xFF00695C),
               showBadge: true,
             ),
@@ -121,7 +126,7 @@ class LiveCareScreen extends StatelessWidget {
             _buildActionCard(
               title: 'Pharma\nLiveCare',
               icon: Icons.monitor_heart_outlined, // Using monitor/pharma icon
-              iconColor: Colors.white,
+              iconColor: Colors.black,
               iconBgColor: const Color(0xFF00695C),
               showBadge: true,
             ),
