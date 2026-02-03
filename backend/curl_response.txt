@@ -1,0 +1,4 @@
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100    51    0     0  100    51      0     42  0:00:01  0:00:01 --:--:--    42100    51    0     0  100    51      0     23  0:00:02  0:00:02 --:--:--    23100    51    0     0  100    51      0     15  0:00:03  0:00:03 --:--:--    15100   110  100    59  100    51     16     13  0:00:03  0:00:03 --:--:--    29
+{"error":"AI service unavailable. Please try again later."}

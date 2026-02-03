@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../../config/api_config.dart';
 import '../../models/triage_models.dart';
 import 'package:intl/intl.dart';
+import '../screens/call_type_screen.dart';
 
 class AIResultScreen extends StatefulWidget {
   final TriageResponse result;
@@ -39,7 +40,7 @@ class _AIResultScreenState extends State<AIResultScreen> {
         }
         return;
       }
-      
+
       // Use HTTP call to backend instead of direct Supabase
       final response = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/api/department-details'),
@@ -57,7 +58,8 @@ class _AIResultScreenState extends State<AIResultScreen> {
 
       final data = jsonDecode(response.body);
       final about = data['about'] as String?;
-      final doctorsList = (data['doctors'] as List).cast<Map<String, dynamic>>();
+      final doctorsList = (data['doctors'] as List)
+          .cast<Map<String, dynamic>>();
 
       if (mounted) {
         setState(() {
@@ -204,8 +206,10 @@ class _AIResultScreenState extends State<AIResultScreen> {
               backgroundColor: Colors.teal.shade100,
               child: Text(
                 (doctor['name'] as String)[0],
-                style:
-                    TextStyle(color: Colors.teal.shade800, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.teal.shade800,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(width: 16),
@@ -241,7 +245,12 @@ class _AIResultScreenState extends State<AIResultScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                // Consultation logic placeholder
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CallTypeScreen(),
+                  ),
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.teal,
@@ -268,7 +277,11 @@ class _AIResultScreenState extends State<AIResultScreen> {
       ),
       child: Text(
         text,
-        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

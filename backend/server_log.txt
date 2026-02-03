@@ -1,0 +1,5 @@
+Imported GenAI
+Imported Supabase
+Imported Env
+Starting App...
+Backend running on port 3000 
