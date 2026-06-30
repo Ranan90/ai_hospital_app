@@ -203,7 +203,7 @@ app.post("/api/department-details", async (req, res) => {
     // Use clientHour if provided, otherwise default to server time
     const activeHour =
       clientHour !== undefined ? clientHour : new Date().getHours();
-    
+
     const filteredDoctors = [];
 
     // Check if doctorsRes is not null/empty
@@ -211,7 +211,7 @@ app.post("/api/department-details", async (req, res) => {
       for (const doc of doctorsRes) {
         // doctor_availability is an array because of the join, but we expect 1 inner join result per doctor for 'today'
         const availability = doc.doctor_availability[0];
-        
+
         if (!availability) continue;
 
         const { morning_slot_available, evening_slot_available } = availability;
@@ -219,7 +219,7 @@ app.post("/api/department-details", async (req, res) => {
         // Logic:
         // Morning (8am - 2pm): Valid if current time < 14
         // Evening (4pm - 7pm): Valid if current time < 19
-        
+
         const morningValid = morning_slot_available && activeHour < 14;
         const eveningValid = evening_slot_available && activeHour < 19;
 
@@ -292,16 +292,16 @@ app.post("/api/doctor/dashboard", async (req, res) => {
         patient_id,
         patient:profiles!patient_id (name, age, gender) 
       `) // Assuming 'profiles' relation exists. If not, we might fail here. 
-         // But user earlier code showed 'profiles' table usage for user updates.
+      // But user earlier code showed 'profiles' table usage for user updates.
       .eq("doctor_id", doctorId)
       .eq("status", "scheduled")
       .gte("appointment_date", today)
       .order("appointment_date", { ascending: true });
 
-    if (apptError) { 
-        console.error("Appt Fetch details:", apptError);
-        // Fallback if profiles relation issue? Just return basic info
-        // But let's throw to see error.
+    if (apptError) {
+      console.error("Appt Fetch details:", apptError);
+      // Fallback if profiles relation issue? Just return basic info
+      // But let's throw to see error.
     }
 
     // 2. Fetch Availability (Next 7 days)
@@ -323,46 +323,46 @@ app.post("/api/doctor/dashboard", async (req, res) => {
     // Logic: If there is an appointment on Date X for Slot Y, that slot is BOOKED.
     // The availability table just says if the doctor *offered* the slot.
     // The dashboard needs to know: Offered? Booked?
-    
+
     // We already fetched scheduled appointments. Let's process availability to add 'booked' flags.
     const processedAvailability = [];
-    
+
     // Helper to generate next 7 days dates
     const dateList = [];
-    for(let i=0; i<7; i++) {
-        const d = new Date();
-        d.setDate(d.getDate() + i);
-        dateList.push(d.toISOString().split("T")[0]);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      dateList.push(d.toISOString().split("T")[0]);
     }
 
     // Map existing availability and appointments
-    for(const d of dateList) {
-        // Find availability record or default
-        const record = availability?.find(r => r.date === d) || { 
-            doctor_id: doctorId, date: d, morning_slot_available: false, evening_slot_available: false 
-        };
+    for (const d of dateList) {
+      // Find availability record or default
+      const record = availability?.find(r => r.date === d) || {
+        doctor_id: doctorId, date: d, morning_slot_available: false, evening_slot_available: false
+      };
 
-        // Check for bookings
-        const dayAppts = appointments?.filter(a => a.appointment_date === d) || [];
-        const morningBooked = dayAppts.some(a => a.slot_type === 'morning');
-        const eveningBooked = dayAppts.some(a => a.slot_type === 'evening');
+      // Check for bookings
+      const dayAppts = appointments?.filter(a => a.appointment_date === d) || [];
+      const morningBooked = dayAppts.some(a => a.slot_type === 'morning');
+      const eveningBooked = dayAppts.some(a => a.slot_type === 'evening');
 
-        processedAvailability.push({
-            date: d,
-            morning: {
-                available: record.morning_slot_available,
-                booked: morningBooked
-            },
-            evening: {
-                available: record.evening_slot_available,
-                booked: eveningBooked
-            }
-        });
+      processedAvailability.push({
+        date: d,
+        morning: {
+          available: record.morning_slot_available,
+          booked: morningBooked
+        },
+        evening: {
+          available: record.evening_slot_available,
+          booked: eveningBooked
+        }
+      });
     }
 
     res.json({
-        appointments: appointments || [],
-        availability: processedAvailability
+      appointments: appointments || [],
+      availability: processedAvailability
     });
 
   } catch (err) {
@@ -373,26 +373,26 @@ app.post("/api/doctor/dashboard", async (req, res) => {
 
 // Update Availability
 app.post("/api/doctor/availability", async (req, res) => {
-    const { doctorId, date, morning, evening } = req.body;
-    
-    try {
-        // Upsert availability record
-        const { data, error } = await supabase
-            .from("doctor_availability")
-            .upsert({
-                doctor_id: doctorId,
-                date: date,
-                morning_slot_available: morning,
-                evening_slot_available: evening
-            }, { onConflict: 'doctor_id, date' })
-            .select();
+  const { doctorId, date, morning, evening } = req.body;
 
-        if (error) throw error;
-        res.json({ success: true, data });
-    } catch(err) {
-        console.error("Update Avail Error:", err);
-        res.status(500).json({ error: "Failed to update availability" });
-    }
+  try {
+    // Upsert availability record
+    const { data, error } = await supabase
+      .from("doctor_availability")
+      .upsert({
+        doctor_id: doctorId,
+        date: date,
+        morning_slot_available: morning,
+        evening_slot_available: evening
+      }, { onConflict: 'doctor_id, date' })
+      .select();
+
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error("Update Avail Error:", err);
+    res.status(500).json({ error: "Failed to update availability" });
+  }
 });
 
 /* =======================

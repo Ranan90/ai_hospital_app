@@ -248,7 +248,7 @@ class _AIResultScreenState extends State<AIResultScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const CallTypeScreen(),
+                    builder: (context) => CallTypeScreen(doctor: doctor),
                   ),
                 );
               },

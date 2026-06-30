@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'dummy_call_screens.dart';
 
 class CallTypeScreen extends StatefulWidget {
-  const CallTypeScreen({super.key});
+  final Map<String, dynamic> doctor;
+
+  const CallTypeScreen({super.key, required this.doctor});
 
   @override
   State<CallTypeScreen> createState() => _CallTypeScreenState();
@@ -83,7 +86,28 @@ class _CallTypeScreenState extends State<CallTypeScreen> {
                 height: 56,
                 child: ElevatedButton(
                   onPressed: () {
-                    // Handle next action
+                    // Navigate based on selection
+                    if (_selectedType == 'video') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              DummyVideoCallScreen(doctor: widget.doctor),
+                        ),
+                      );
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DummyAudioCallScreen(
+                            callType: _selectedType == 'phone'
+                                ? 'Phone'
+                                : 'Audio',
+                            doctor: widget.doctor,
+                          ),
+                        ),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _tealColor,
